@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -236,14 +236,16 @@ export default function App() {
     });
   };
 
+  const isSmallScreen = Platform.OS === 'ios' || Platform.OS === 'android';
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
       <Text style={styles.header}>Jobbmål 2024</Text>
       
-      <View style={styles.contentContainer}>
-        {/* Left side - Goals List */}
-        <ScrollView style={styles.goalsList}>
+      <View style={[styles.contentContainer, isSmallScreen && styles.contentContainerMobile]}>
+        {/* Goals List */}
+        <ScrollView style={[styles.goalsList, isSmallScreen && styles.goalsListMobile]}>
           {goals.map((goal, goalIndex) => (
             <View key={goalIndex} style={[styles.goalCard, { backgroundColor: goal.color }]}>
               <View style={styles.goalTitleContainer}>
@@ -261,7 +263,7 @@ export default function App() {
                       style={styles.goalTitleButton} 
                       onPress={() => handleGoalPress(goal, goalIndex)}
                     >
-                      <Text style={styles.goalTitle}>
+                      <Text style={styles.goalTitle} numberOfLines={2}>
                         {goal.title} {isGoalCompleted(goalIndex) ? "✅" : ""}
                       </Text>
                     </TouchableOpacity>
@@ -287,10 +289,13 @@ export default function App() {
                     style={styles.subtaskTextContainer}
                     onPress={() => handleSubtaskPress(subtask, goalIndex, subtaskIndex)}
                   >
-                    <Text style={[
-                      styles.subtask,
-                      completedTasks[`${goalIndex}-${subtaskIndex}`] && styles.completedSubtask
-                    ]}>
+                    <Text 
+                      style={[
+                        styles.subtask,
+                        completedTasks[`${goalIndex}-${subtaskIndex}`] && styles.completedSubtask
+                      ]}
+                      numberOfLines={2}
+                    >
                       {subtask.task}
                       {savedComments[`${goalIndex}-${subtaskIndex}`] ? " 📝" : ""}
                     </Text>
@@ -309,7 +314,7 @@ export default function App() {
                   style={styles.addSubtaskInput}
                   value={newSubtaskText}
                   onChangeText={setNewSubtaskText}
-                  placeholder="New subtask..."
+                  placeholder="Ny uppgift..."
                   onSubmitEditing={() => addSubtask(goalIndex)}
                 />
                 <TouchableOpacity 
@@ -323,23 +328,24 @@ export default function App() {
           ))}
         </ScrollView>
 
-        {/* Right side - Goal Details */}
-        <ScrollView style={styles.detailsPanel}>
-          {selectedGoal ? (
-            <>
-              <Text style={styles.detailsTitle}>{selectedGoal.title}</Text>
-              <Text style={styles.label}>Description:</Text>
-              <Text style={styles.description}>{selectedGoal.description}</Text>
-              
-              <Text style={styles.label}>Comments:</Text>
-              <View style={styles.commentsContainer}>
-                {renderSubtaskComments(selectedGoal.index)}
-              </View>
-            </>
-          ) : (
-            <Text style={styles.noSelection}>Select a goal to view details</Text>
-          )}
-        </ScrollView>
+        {/* Details Panel - Only show on larger screens */}
+        {!isSmallScreen && (
+          <ScrollView style={styles.detailsPanel}>
+            {selectedGoal ? (
+              <>
+                <Text style={styles.detailsTitle}>{selectedGoal.title}</Text>
+                <Text style={styles.label}>Beskrivning:</Text>
+                <Text style={styles.description}>{selectedGoal.description}</Text>
+                <Text style={styles.label}>Kommentarer:</Text>
+                <View style={styles.commentsContainer}>
+                  {renderSubtaskComments(selectedGoal.index)}
+                </View>
+              </>
+            ) : (
+              <Text style={styles.noSelection}>Välj ett mål för att se detaljer</Text>
+            )}
+          </ScrollView>
+        )}
       </View>
 
       {/* Subtask Modal */}
@@ -388,41 +394,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
   },
   contentContainer: {
     flex: 1,
     flexDirection: 'row',
-    padding: 20,
+    padding: 15,
     gap: 20,
   },
+  contentContainerMobile: {
+    flexDirection: 'column',
+    padding: 10,
+  },
   header: {
-    fontSize: 28,
+    fontSize: Platform.OS === 'ios' ? 22 : 24,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
     color: '#2d3436',
-    textShadow: '1px 1px 1px rgba(0,0,0,0.1)',
   },
   goalsList: {
     flex: 1,
     marginRight: 15,
   },
+  goalsListMobile: {
+    marginRight: 0,
+  },
   goalCard: {
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 20,
-    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    shadowRadius: 4,
+    elevation: 3,
   },
   goalTitleContainer: {
     marginBottom: 15,
@@ -442,25 +451,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   goalTitle: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'ios' ? 16 : 18,
     fontWeight: '600',
     color: '#2d3436',
-    marginBottom: 10,
   },
   subtaskContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 5,
-    borderRadius: 8,
-    marginBottom: 5,
-  },
-  checkbox: {
-    marginRight: 10,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   subtaskTextContainer: {
     flex: 1,
@@ -470,9 +469,9 @@ const styles = StyleSheet.create({
     color: '#a0a0a0',
   },
   subtask: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'ios' ? 14 : 16,
     color: '#636e72',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   detailsPanel: {
     flex: 1,
@@ -629,8 +628,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: 8,
-    padding: 8,
-    marginRight: 10,
+    padding: Platform.OS === 'ios' ? 8 : 10,
+    fontSize: Platform.OS === 'ios' ? 14 : 16,
+    marginRight: 8,
   },
   addButton: {
     backgroundColor: '#00b894',
@@ -646,13 +646,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   removeButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: 'rgba(255,99,99,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10,
+    marginLeft: 8,
   },
   removeButtonText: {
     color: '#ff6666',
