@@ -89,6 +89,9 @@ export default function App() {
   const [editingGoalTitle, setEditingGoalTitle] = useState(null);
   const [newSubtaskText, setNewSubtaskText] = useState("");
   const [goalDetailsModalVisible, setGoalDetailsModalVisible] = useState(false);
+  const [newGoalModalVisible, setNewGoalModalVisible] = useState(false);
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalDescription, setNewGoalDescription] = useState('');
 
   useEffect(() => {
     loadAllData();
@@ -274,165 +277,254 @@ export default function App() {
     </Modal>
   );
 
-  return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <TouchableWithoutFeedback onPress={dismissKeyboard}>
-        <View style={styles.container}>
-          <StatusBar style="auto" />
-          <Text style={styles.header}>Jobbmål 2024</Text>
-          
-          <View style={[styles.contentContainer, isSmallScreen && styles.contentContainerMobile]}>
-            {/* Goals List */}
-            <ScrollView style={[styles.goalsList, isSmallScreen && styles.goalsListMobile]}>
-              {goals.map((goal, goalIndex) => (
-                <View key={goalIndex} style={[styles.goalCard, { backgroundColor: goal.color }]}>
-                  <View style={styles.goalTitleContainer}>
-                    {editingGoalTitle === goalIndex ? (
-                      <View style={styles.inputContainer}>
-                        <TextInput
-                          style={styles.goalTitleInput}
-                          value={goal.title}
-                          onChangeText={(text) => handleGoalTitleEdit(goalIndex, text)}
-                          onBlur={() => setEditingGoalTitle(null)}
-                          autoFocus
-                        />
-                        <TouchableOpacity 
-                          style={styles.keyboardDoneButton}
-                          onPress={dismissKeyboard}
-                        >
-                          <Text style={styles.keyboardDoneText}>Klar</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <View style={styles.goalTitleRow}>
-                        <TouchableOpacity 
-                          style={styles.goalTitleButton} 
-                          onPress={() => handleGoalPress(goal, goalIndex)}
-                        >
-                          <Text style={styles.goalTitle} numberOfLines={2}>
-                            {goal.title} {isGoalCompleted(goalIndex) ? "✅" : ""}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={styles.editButton}
-                          onPress={() => setEditingGoalTitle(goalIndex)}
-                        >
-                          <Text>✏️</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                  
-                  {goal.subtasks.map((subtask, subtaskIndex) => (
-                    <View key={subtaskIndex} style={styles.subtaskContainer}>
-                      <TouchableOpacity 
-                        style={styles.checkbox}
-                        onPress={() => toggleSubtaskCompletion(goalIndex, subtaskIndex)}
-                      >
-                        <Text>{completedTasks[`${goalIndex}-${subtaskIndex}`] ? "☑️" : "⬜"}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.subtaskTextContainer}
-                        onPress={() => handleSubtaskPress(subtask, goalIndex, subtaskIndex)}
-                      >
-                        <Text 
-                          style={[
-                            styles.subtask,
-                            completedTasks[`${goalIndex}-${subtaskIndex}`] && styles.completedSubtask
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {subtask.task}
-                          {savedComments[`${goalIndex}-${subtaskIndex}`] ? " 📝" : ""}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.removeButton}
-                        onPress={() => removeSubtask(goalIndex, subtaskIndex)}
-                      >
-                        <Text style={styles.removeButtonText}>×</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  
-                  <View style={styles.addSubtaskContainer}>
-                    <View style={styles.inputContainer}>
-                      <TextInput
-                        style={styles.addSubtaskInput}
-                        value={newSubtaskText}
-                        onChangeText={setNewSubtaskText}
-                        placeholder="Ny uppgift..."
-                        onSubmitEditing={() => {
-                          addSubtask(goalIndex);
-                          dismissKeyboard();
-                        }}
-                      />
-                      <TouchableOpacity 
-                        style={styles.keyboardDoneButton}
-                        onPress={dismissKeyboard}
-                      >
-                        <Text style={styles.keyboardDoneText}>Klar</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity 
-                      style={styles.addButton}
-                      onPress={() => {
-                        addSubtask(goalIndex);
-                        dismissKeyboard();
-                      }}
-                    >
-                      <Text style={styles.addButtonText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
+  const addNewGoal = async () => {
+    if (!newGoalTitle.trim()) return;
 
-            {/* Details Panel - Only show on larger screens */}
-            {!isSmallScreen && (
-              <ScrollView style={styles.detailsPanel}>
-                {selectedGoal ? (
-                  <>
-                    <Text style={styles.detailsTitle}>{selectedGoal.title}</Text>
-                    <Text style={styles.label}>Beskrivning:</Text>
-                    <Text style={styles.description}>{selectedGoal.description}</Text>
-                    <Text style={styles.label}>Kommentarer:</Text>
-                    <View style={styles.commentsContainer}>
-                      {renderSubtaskComments(selectedGoal.index)}
-                    </View>
-                  </>
-                ) : (
-                  <Text style={styles.noSelection}>Välj ett mål för att se detaljer</Text>
-                )}
-              </ScrollView>
-            )}
+    const newGoal = {
+      title: newGoalTitle,
+      description: newGoalDescription,
+      subtasks: [],
+      color: getRandomColor(),
+      comments: ''
+    };
+
+    const newGoals = [...goals, newGoal];
+    await saveGoals(newGoals);
+    
+    setNewGoalTitle('');
+    setNewGoalDescription('');
+    setNewGoalModalVisible(false);
+  };
+
+  const getRandomColor = () => {
+    const colors = [
+      '#FFD700', // Gold
+      '#98FB98', // Pale green
+      '#87CEEB', // Sky blue
+      '#DDA0DD', // Plum
+      '#F0E68C', // Khaki
+      '#E6E6FA', // Lavender
+      '#FFA07A', // Light salmon
+      '#B0E0E6', // Powder blue
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
+  const NewGoalModal = () => (
+    <Modal
+      animationType="none"
+      transparent={true}
+      visible={newGoalModalVisible}
+      onRequestClose={() => setNewGoalModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Nytt mål</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setNewGoalModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>×</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Subtask Modal */}
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <TouchableWithoutFeedback onPress={dismissKeyboard}>
-              <View style={styles.modalView}>
-                <Text style={styles.modalTitle}>{selectedSubtask?.task}</Text>
-                
-                <Text style={styles.label}>Beskrivning:</Text>
-                <Text style={styles.description}>{selectedSubtask?.description}</Text>
-                
-                <Text style={styles.label}>Anteckningar:</Text>
+          <View style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Titel</Text>
+              <TextInput
+                style={styles.titleInput}
+                value={newGoalTitle}
+                onChangeText={(text) => setNewGoalTitle(text)}
+                placeholder="Ange målets titel"
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Beskrivning</Text>
+              <TextInput
+                style={styles.descriptionInput}
+                value={newGoalDescription}
+                onChangeText={(text) => setNewGoalDescription(text)}
+                placeholder="Beskriv målet"
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity 
+                style={[styles.button, styles.saveButton]}
+                onPress={addNewGoal}
+              >
+                <Text style={styles.buttonText}>Skapa mål</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => setNewGoalModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Avbryt</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const SubtaskModal = () => (
+    <Modal
+      animationType="none"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalInner}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{selectedSubtask?.task}</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>×</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.modalContent}>
+            <Text style={styles.label}>Beskrivning:</Text>
+            <Text style={styles.description}>{selectedSubtask?.description}</Text>
+            
+            <Text style={styles.label}>Anteckningar:</Text>
+            <TextInput
+              style={styles.commentsInput}
+              multiline
+              value={currentComments}
+              onChangeText={(text) => setCurrentComments(text)}
+              placeholder="Lägg till anteckningar här..."
+              placeholderTextColor="#999"
+            />
+            
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity 
+                style={[styles.button, styles.saveButton]} 
+                onPress={handleSaveComments}
+              >
+                <Text style={styles.buttonText}>Spara</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.button, styles.cancelButton]} 
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Stäng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="auto" />
+      <View style={styles.headerContainer}>
+        <Text style={styles.header}>Goalie</Text>
+        <TouchableOpacity 
+          style={styles.addGoalButton}
+          onPress={() => setNewGoalModalVisible(true)}
+        >
+          <Text style={styles.addGoalButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <View style={[styles.contentContainer, isSmallScreen && styles.contentContainerMobile]}>
+        {/* Goals List */}
+        <ScrollView style={[styles.goalsList, isSmallScreen && styles.goalsListMobile]}>
+          {goals.map((goal, goalIndex) => (
+            <View key={goalIndex} style={[styles.goalCard, { backgroundColor: goal.color }]}>
+              <View style={styles.goalTitleContainer}>
+                {editingGoalTitle === goalIndex ? (
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.goalTitleInput}
+                      value={goal.title}
+                      onChangeText={(text) => handleGoalTitleEdit(goalIndex, text)}
+                      onBlur={() => setEditingGoalTitle(null)}
+                      autoFocus
+                    />
+                    <TouchableOpacity 
+                      style={styles.keyboardDoneButton}
+                      onPress={dismissKeyboard}
+                    >
+                      <Text style={styles.keyboardDoneText}>Klar</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.goalTitleRow}>
+                    <TouchableOpacity 
+                      style={styles.goalTitleButton} 
+                      onPress={() => handleGoalPress(goal, goalIndex)}
+                    >
+                      <Text style={styles.goalTitle} numberOfLines={2}>
+                        {goal.title} {isGoalCompleted(goalIndex) ? "✅" : ""}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={() => setEditingGoalTitle(goalIndex)}
+                    >
+                      <Text>✏️</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
+              {goal.subtasks.map((subtask, subtaskIndex) => (
+                <View key={subtaskIndex} style={styles.subtaskContainer}>
+                  <TouchableOpacity 
+                    style={styles.checkbox}
+                    onPress={() => toggleSubtaskCompletion(goalIndex, subtaskIndex)}
+                  >
+                    <Text>{completedTasks[`${goalIndex}-${subtaskIndex}`] ? "☑️" : "⬜"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.subtaskTextContainer}
+                    onPress={() => handleSubtaskPress(subtask, goalIndex, subtaskIndex)}
+                  >
+                    <Text 
+                      style={[
+                        styles.subtask,
+                        completedTasks[`${goalIndex}-${subtaskIndex}`] && styles.completedSubtask
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {subtask.task}
+                      {savedComments[`${goalIndex}-${subtaskIndex}`] ? " 📝" : ""}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.removeButton}
+                    onPress={() => removeSubtask(goalIndex, subtaskIndex)}
+                  >
+                    <Text style={styles.removeButtonText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              
+              <View style={styles.addSubtaskContainer}>
                 <View style={styles.inputContainer}>
                   <TextInput
-                    style={styles.commentsInput}
-                    multiline
-                    value={currentComments}
-                    onChangeText={setCurrentComments}
-                    placeholder="Lägg till anteckningar här..."
+                    style={styles.addSubtaskInput}
+                    value={newSubtaskText}
+                    onChangeText={setNewSubtaskText}
+                    placeholder="Ny uppgift..."
+                    onSubmitEditing={() => {
+                      addSubtask(goalIndex);
+                      dismissKeyboard();
+                    }}
                   />
                   <TouchableOpacity 
                     style={styles.keyboardDoneButton}
@@ -441,36 +533,44 @@ export default function App() {
                     <Text style={styles.keyboardDoneText}>Klar</Text>
                   </TouchableOpacity>
                 </View>
-                
-                <View style={styles.buttonContainer}>
-                  <TouchableOpacity 
-                    style={[styles.button, styles.saveButton]} 
-                    onPress={() => {
-                      handleSaveComments();
-                      dismissKeyboard();
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Spara</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.button, styles.cancelButton]} 
-                    onPress={() => {
-                      setModalVisible(false);
-                      dismissKeyboard();
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Stäng</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity 
+                  style={styles.addButton}
+                  onPress={() => {
+                    addSubtask(goalIndex);
+                    dismissKeyboard();
+                  }}
+                >
+                  <Text style={styles.addButtonText}>+</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
-          </Modal>
+            </View>
+          ))}
+        </ScrollView>
 
-          {/* Goal Details Modal for mobile */}
-          {isSmallScreen && <GoalDetailsModal />}
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        {/* Details Panel - Only show on larger screens */}
+        {!isSmallScreen && (
+          <ScrollView style={styles.detailsPanel}>
+            {selectedGoal ? (
+              <>
+                <Text style={styles.detailsTitle}>{selectedGoal.title}</Text>
+                <Text style={styles.label}>Beskrivning:</Text>
+                <Text style={styles.description}>{selectedGoal.description}</Text>
+                <Text style={styles.label}>Kommentarer:</Text>
+                <View style={styles.commentsContainer}>
+                  {renderSubtaskComments(selectedGoal.index)}
+                </View>
+              </>
+            ) : (
+              <Text style={styles.noSelection}>Välj ett mål för att se detaljer</Text>
+            )}
+          </ScrollView>
+        )}
+      </View>
+
+      <NewGoalModal />
+      <SubtaskModal />
+      {isSmallScreen && <GoalDetailsModal />}
+    </View>
   );
 }
 
@@ -771,5 +871,88 @@ const styles = StyleSheet.create({
     color: '#ff6666',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  addGoalButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#00b894',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addGoalButtonText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  inputWrapper: {
+    marginBottom: 20,
+  },
+  titleInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  descriptionInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+    minHeight: 100,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalInner: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    width: Platform.OS === 'web' ? '80%' : '100%',
+    maxWidth: Platform.OS === 'web' ? 500 : '100%',
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  commentsInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+    minHeight: 100,
+    marginBottom: 20,
   },
 });

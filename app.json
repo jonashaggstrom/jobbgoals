@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "jobbgoals",
-    "slug": "jobbgoals",
+    "name": "Goalie",
+    "slug": "goalie",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
